@@ -51,6 +51,9 @@
 
 會爬取 PublicServan 板文章 ID 為 M.1413618360.A.4F0 (https://www.ptt.cc/bbs/PublicServan/M.1413618360.A.4F0.html) 的內容，輸出至 `PublicServan-M.1413618360.A.4F0.json`
 
+    python crawler.py -b PublicServan -i -1 5
+爬取 PublicServan 版文章最後5頁 輸出檔名仍為起始與終止頁碼
+
 ### 測試
     python test.py
 
