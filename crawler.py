@@ -40,12 +40,18 @@ def crawler(cmdline=None):
     board = args.b
     PTT_URL = 'https://www.ptt.cc'
     if args.i:
+        if args.i[0] == -1:  # reverse order
+            start = getLastPage(board)-(args.i[1]-1)
+            end = getLastPage(board)
+        else:
         start = args.i[0]
         if args.i[1] == -1:
             end = getLastPage(board)
+                print("end at:"+str(end))
         else:
             end = args.i[1]
         index = start
+        print("processing from "+str(start)+" to "+str(end))
         filename = board + '-' + str(start) + '-' + str(end) + '.json'
         store(filename, u'{"articles": [\n', 'w')
         for i in range(end-start+1):
