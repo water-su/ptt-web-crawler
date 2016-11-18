@@ -38,8 +38,9 @@
     }
 
 ### 執行方式
-    python crawler.py -b 看板名稱 -i 起始索引 結束索引 (設為 -1 則自動計算最後一頁) 
-    python crawler.py -b 看板名稱 -a 文章ID 
+    python crawler.py -b 看板名稱 -i 起始索引 結束索引 (結束索引設為 -1 則自動計算最後一頁)  
+    python crawler.py -b 看板名稱 -a 文章ID
+    python crawler.py -b 看板名稱 -i -1 需求頁數  #2016.11.18 新增爬取最新n頁的參數設定
 
 ### 範例
     python crawler.py -b PublicServan -i 100 200
