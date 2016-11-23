@@ -8,6 +8,7 @@
 * 過濾資料內空白、空行及特殊字元
 * JSON 格式輸出
 * 支援 Python 2.7 - 3.4
+* Support upload to firebase
 
 輸出 JSON 格式
 
@@ -66,6 +67,8 @@ ptt-web-crawler is a crawler for the web version of PTT, the largest online comm
       -h, --help                  show this help message and exit
       -b BOARD_NAME               Board name
       -i START_INDEX END_INDEX    Start and end index
+      -p SERVER_URL               (optional) firebase server URL(if not exist -> dump to file)
+      -f TITLE_FILTER             (optional) filter string for article title
       -a ARTICLE_ID               Article ID
       -v, --version               show program's version number and exit
 

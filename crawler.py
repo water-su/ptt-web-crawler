@@ -11,6 +11,7 @@ import time
 import codecs
 from bs4 import BeautifulSoup
 from six import u
+from firebase import firebase
 
 __version__ = '1.0'
 
@@ -20,6 +21,7 @@ if sys.version_info[0] < 3:
     VERIFY = False
     requests.packages.urllib3.disable_warnings()
 
+useFirebase = False
 
 def crawler(cmdline=None):
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, description='''
@@ -28,6 +30,8 @@ def crawler(cmdline=None):
         Output: BOARD_NAME-START_INDEX-END_INDEX.json (or BOARD_NAME-ID.json)
     ''')
     parser.add_argument('-b', metavar='BOARD_NAME', help='Board name', required=True)
+    parser.add_argument('-p', metavar='SERVER_URL', help='Firebase Server url', required=False)
+    parser.add_argument('-f', metavar='TITLE_FILTER', help='Article title filter', required=False)
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-i', metavar=('START_INDEX', 'END_INDEX'), type=int, nargs=2, help="Start and end index")
     group.add_argument('-a', metavar='ARTICLE_ID', help="Article ID")
@@ -36,7 +40,13 @@ def crawler(cmdline=None):
     if cmdline:
         args = parser.parse_args(cmdline)
     else:
-       args = parser.parse_args()
+        args = parser.parse_args()
+
+    if args.p:
+        useFirebase = True
+        firebase_inst = firebase.FirebaseApplication(args.p,None)
+    else:
+        useFirebase = False
     board = args.b
     PTT_URL = 'https://www.ptt.cc'
     if args.i:
@@ -44,16 +54,17 @@ def crawler(cmdline=None):
             start = getLastPage(board)-(args.i[1]-1)
             end = getLastPage(board)
         else:
-        start = args.i[0]
-        if args.i[1] == -1:
-            end = getLastPage(board)
+            start = args.i[0]
+            if args.i[1] == -1:
+                end = getLastPage(board)
                 print("end at:"+str(end))
-        else:
-            end = args.i[1]
+            else:
+                end = args.i[1]
         index = start
         print("processing from "+str(start)+" to "+str(end))
-        filename = board + '-' + str(start) + '-' + str(end) + '.json'
-        store(filename, u'{"articles": [\n', 'w')
+        if not useFirebase:
+            filename = board + '-' + str(start) + '-' + str(end) + '.json'
+            store(filename, u'{"articles": [\n', 'w')
         for i in range(end-start+1):
             index = start + i
             print('Processing index:', str(index))
@@ -73,13 +84,26 @@ def crawler(cmdline=None):
                     link = PTT_URL + href
                     article_id = re.sub('\.html', '', href.split('/')[-1])
                     if div == divs[-1] and i == end-start:  # last div of last page
-                        store(filename, parse(link, article_id, board) + '\n', 'a')
+                        data = parse(link, article_id, board, args.f)
+                        if useFirebase:
+                            storeFirebase(firebase_inst, data)
+                        else:
+                            if data:
+                                data = json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
+                                store(filename, data + '\n', 'a')
                     else:
-                        store(filename, parse(link, article_id, board) + ',\n', 'a')
+                        data = parse(link, article_id, board, args.f)
+                        if useFirebase:
+                            storeFirebase(firebase_inst, data)
+                        else:
+                            if data:
+                                data = json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
+                                store(filename, data + ',\n', 'a')
                 except:
                     pass
             time.sleep(0.1)
-        store(filename, u']}', 'a')
+        if not useFirebase:
+            store(filename, u']}', 'a')
     else:  # args.a
         article_id = args.a
         link = PTT_URL + '/bbs/' + board + '/' + article_id + '.html'
@@ -87,7 +111,7 @@ def crawler(cmdline=None):
         store(filename, parse(link, article_id, board), 'w')
 
 
-def parse(link, article_id, board):
+def parse(link, article_id, board, filter=None):
     print('Processing article:', article_id)
     resp = requests.get(url=link, cookies={'over18': '1'}, verify=VERIFY)
     if resp.status_code != 200:
@@ -173,7 +197,11 @@ def parse(link, article_id, board):
         'messages': messages
     }
     # print 'original:', d
-    return json.dumps(data, indent=4, sort_keys=True, ensure_ascii=False)
+    if filter:
+        if (filter.decode('utf-8') in title):
+            return data
+    else:
+        return data
 
 
 def getLastPage(board):
@@ -190,6 +218,12 @@ def getLastPage(board):
 def store(filename, data, mode):
     with codecs.open(filename, mode, encoding='utf-8') as f:
         f.write(data)
+
+def storeFirebase(base, data):
+    path = '/articles/'+data.get(u"article_id", None)+'/'
+    path = path.replace('.','_')    #path can not contain  '.'
+    print(path)
+    base.patch(path, data)
 
 
 if __name__ == '__main__':
